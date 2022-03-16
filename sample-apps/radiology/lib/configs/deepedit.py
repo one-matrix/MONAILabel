@@ -103,7 +103,7 @@ class DeepEdit(TaskConfig):
             spatial_size=self.planner.spatial_size if self.planner else (128, 128, 64),
             target_spacing=self.planner.target_spacing if self.planner else (1.0, 1.0, 1.0),
             config={"pretrained": strtobool(self.conf.get("use_pretrained_model", "true"))},
-            label_names=self.labels,
+            labels=self.labels,
             debug_mode=False,
             find_unused_parameters=True,
         )

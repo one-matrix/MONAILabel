@@ -82,5 +82,6 @@ class Segmentation(TaskConfig):
             publish_path=self.path[1],
             description="Train Multilabel Segmentation Model",
             dimension=3,
+            labels=self.labels,
         )
         return task

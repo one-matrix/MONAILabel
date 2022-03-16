@@ -67,5 +67,6 @@ class SegmentationSpleen(TaskConfig):
             description="Train Spleen Segmentation Model",
             load_path=self.path[0],
             publish_path=self.path[1],
+            labels=self.labels,
         )
         return task

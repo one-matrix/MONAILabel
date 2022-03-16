@@ -79,6 +79,7 @@ class Deepgrow2D(TaskConfig):
             publish_path=self.path[1],
             description="Train 2D Deepgrow model",
             dimension=2,
+            labels=self.labels,
             roi_size=(256, 256),
             model_size=(256, 256),
             max_train_interactions=10,
