@@ -16,7 +16,7 @@ from typing import Any, Dict, Optional, Union
 
 import lib.infers
 import lib.trainers
-from monai.networks.nets import DynUNet
+from monai.networks.nets import UNet
 
 from monailabel.interfaces.config import TaskConfig
 from monailabel.interfaces.tasks.infer import InferTask
@@ -59,16 +59,14 @@ class Segmentation(TaskConfig):
             download_file(url, self.path[0])
 
         # Network
-        self.network = DynUNet(
-            spatial_dims=3,
+        self.network = UNet(
+            dimensions=3,
             in_channels=1,
             out_channels=14,
-            kernel_size=[[3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
-            strides=[[1, 1, 1], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 1]],
-            upsample_kernel_size=[[2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 1]],
-            norm_name="instance",
-            deep_supervision=False,
-            res_block=True,
+            channels=[16, 32, 64, 128, 256],
+            strides=[2, 2, 2, 2],
+            num_res_units=2,
+            norm="batch",
         )
 
     def infer(self) -> Union[InferTask, Dict[str, InferTask]]:

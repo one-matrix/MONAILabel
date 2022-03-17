@@ -18,6 +18,7 @@ from monai.transforms import (
     Activationsd,
     AddChanneld,
     AsDiscreted,
+    CropForegroundd,
     EnsureTyped,
     LoadImaged,
     RandFlipd,
@@ -54,10 +55,13 @@ class Segmentation(BasicTrainTask):
         return self._network
 
     def optimizer(self, context: Context):
-        return torch.optim.Adam(self._network.parameters(), lr=0.001)
+        return torch.optim.Adam(context.network.parameters(), lr=0.0001)
 
     def loss_function(self, context: Context):
         return DiceLoss(to_onehot_y=True, softmax=True, squared_pred=True)
+
+    def lr_scheduler(self, context: Context):
+        return torch.optim.lr_scheduler.ExponentialLR(context.optimizer, gamma=0.95)
 
     def train_pre_transforms(self, context: Context):
         return [
@@ -70,6 +74,7 @@ class Segmentation(BasicTrainTask):
                 align_corners=(True, True),
             ),
             ScaleIntensityRanged(keys="image", a_min=-175, a_max=250, b_min=0.0, b_max=1.0, clip=True),
+            CropForegroundd(keys=("image", "label"), source_key="image"),
             FindAllValidSlicesByClassd(label="label", sids="sids"),
             RandomCroppedSamplesd(
                 keys=("image", "label"),
