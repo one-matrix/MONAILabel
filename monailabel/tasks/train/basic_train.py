@@ -176,8 +176,9 @@ class BasicTrainTask(TrainTask):
     def loss_function(self, context: Context):
         pass
 
-    def lr_scheduler(self, context: Context):
-        return torch.optim.lr_scheduler.StepLR(context.optimizer, step_size=100, gamma=0.1)
+    def lr_scheduler_handler(self, context: Context):
+        lr_scheduler = torch.optim.lr_scheduler.StepLR(context.optimizer, step_size=100, gamma=0.1)
+        return LrScheduleHandler(lr_scheduler, print_lr=True)
 
     def _dataset(self, context, datalist, replace_rate=0.25):
         if context.multi_gpu:
@@ -236,8 +237,9 @@ class BasicTrainTask(TrainTask):
 
     def train_handlers(self, context: Context):
         handlers: List[Any] = [
-            LrScheduleHandler(lr_scheduler=self.lr_scheduler(context), print_lr=True),
+            self.lr_scheduler_handler(context),
         ]
+
         if context.local_rank == 0:
             handlers.extend(
                 [

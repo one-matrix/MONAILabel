@@ -11,7 +11,7 @@
 import logging
 
 import torch
-from monai.handlers import TensorBoardImageHandler, from_engine
+from monai.handlers import LrScheduleHandler, TensorBoardImageHandler, from_engine
 from monai.inferers import SlidingWindowInferer
 from monai.losses import DiceLoss
 from monai.transforms import (
@@ -60,8 +60,9 @@ class Segmentation(BasicTrainTask):
     def loss_function(self, context: Context):
         return DiceLoss(to_onehot_y=True, softmax=True, squared_pred=True)
 
-    def lr_scheduler(self, context: Context):
-        return torch.optim.lr_scheduler.ReduceLROnPlateau(context.optimizer, mode='min')
+    def lr_scheduler_handler(self, context: Context):
+        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(context.optimizer, mode="min")
+        return LrScheduleHandler(lr_scheduler, print_lr=True, step_transform=from_engine(["loss"], first=True))
 
     def train_pre_transforms(self, context: Context):
         return [
