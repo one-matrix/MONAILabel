@@ -11,7 +11,7 @@
 import logging
 
 import torch
-from monai.handlers import LrScheduleHandler, TensorBoardImageHandler, from_engine
+from monai.handlers import TensorBoardImageHandler, from_engine
 from monai.inferers import SlidingWindowInferer
 from monai.losses import DiceLoss
 from monai.transforms import (
@@ -31,7 +31,7 @@ from monai.transforms import (
 
 from monailabel.tasks.train.basic_train import BasicTrainTask, Context
 from monailabel.tasks.train.utils import region_wise_metrics
-from monailabel.transform.pre import FindAllValidSlicesByClassd, RandomCroppedSamplesd
+from monailabel.transform.pre import FindAllValidSlicesByClassd, RandomForegroundCropSamplesd
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ class Segmentation(BasicTrainTask):
         model_dir,
         network,
         spatial_size=(128, 128, 128),
-        num_samples=6,
+        num_samples=8,
         description="Train Segmentation model",
         **kwargs,
     ):
@@ -55,14 +55,10 @@ class Segmentation(BasicTrainTask):
         return self._network
 
     def optimizer(self, context: Context):
-        return torch.optim.Adam(context.network.parameters(), lr=0.0001)
+        return torch.optim.AdamW(context.network.parameters(), amsgrad=True)
 
     def loss_function(self, context: Context):
         return DiceLoss(to_onehot_y=True, softmax=True, squared_pred=True)
-
-    def lr_scheduler_handler(self, context: Context):
-        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(context.optimizer, mode="min")
-        return LrScheduleHandler(lr_scheduler, print_lr=True, step_transform=lambda x: x.state.output[0]["loss"])
 
     def train_pre_transforms(self, context: Context):
         return [
@@ -77,7 +73,7 @@ class Segmentation(BasicTrainTask):
             ScaleIntensityRanged(keys="image", a_min=-175, a_max=250, b_min=0.0, b_max=1.0, clip=True),
             CropForegroundd(keys=("image", "label"), source_key="image"),
             FindAllValidSlicesByClassd(label="label", sids="sids"),
-            RandomCroppedSamplesd(
+            RandomForegroundCropSamplesd(
                 keys=("image", "label"),
                 label_key="label",
                 sids_key="sids",

@@ -60,13 +60,12 @@ class Segmentation(TaskConfig):
 
         # Network
         self.network = UNet(
-            dimensions=3,
+            spatial_dims=3,
             in_channels=1,
             out_channels=14,
             channels=[16, 32, 64, 128, 256],
             strides=[2, 2, 2, 2],
             num_res_units=2,
-            norm="batch",
         )
 
     def infer(self) -> Union[InferTask, Dict[str, InferTask]]:

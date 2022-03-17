@@ -132,7 +132,7 @@ class RandomCroppedSamplesd(Randomizable, Transform):
         spatial_size: Union[Sequence[int], int],
         sids_key: str = "sids",
         num_samples: int = 1,
-        foreground_probability: float = 0.75,
+        foreground_probability: float = 0.9,
     ):
         self.probability = foreground_probability
         self.random_foreground = RandomForegroundCropSamplesd(

@@ -177,7 +177,10 @@ class BasicTrainTask(TrainTask):
         pass
 
     def lr_scheduler_handler(self, context: Context):
-        lr_scheduler = torch.optim.lr_scheduler.StepLR(context.optimizer, step_size=100, gamma=0.1)
+        # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(context.optimizer, mode="min")
+        # return LrScheduleHandler(lr_scheduler, print_lr=True, step_transform=lambda x: x.state.output[0]["loss"])
+
+        lr_scheduler = torch.optim.lr_scheduler.StepLR(context.optimizer, step_size=1000, gamma=0.1)
         return LrScheduleHandler(lr_scheduler, print_lr=True)
 
     def _dataset(self, context, datalist, replace_rate=0.25):
@@ -236,9 +239,12 @@ class BasicTrainTask(TrainTask):
         return load_path
 
     def train_handlers(self, context: Context):
-        handlers: List[Any] = [
-            self.lr_scheduler_handler(context),
-        ]
+        handlers: List[Any] = []
+
+        # LR Scheduler
+        lr_scheduler = self.lr_scheduler_handler(context)
+        if lr_scheduler:
+            handlers.append(lr_scheduler)
 
         if context.local_rank == 0:
             handlers.extend(
