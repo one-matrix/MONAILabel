@@ -55,13 +55,13 @@ class Segmentation(BasicTrainTask):
         return self._network
 
     def optimizer(self, context: Context):
-        return torch.optim.Adam(context.network.parameters(), lr=0.0001)
+        return torch.optim.Adam(context.network.parameters(), lr=0.01)
 
     def loss_function(self, context: Context):
         return DiceLoss(to_onehot_y=True, softmax=True, squared_pred=True)
 
     def lr_scheduler(self, context: Context):
-        return torch.optim.lr_scheduler.ExponentialLR(context.optimizer, gamma=0.95)
+        return torch.optim.lr_scheduler.ReduceLROnPlateau(context.optimizer, mode='min')
 
     def train_pre_transforms(self, context: Context):
         return [
