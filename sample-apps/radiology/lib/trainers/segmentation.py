@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-from typing import Any, List
 
 import torch
 from monai.handlers import TensorBoardImageHandler, from_engine
@@ -20,7 +19,6 @@ from monai.transforms import (
     AddChanneld,
     AsDiscreted,
     EnsureTyped,
-    KeepLargestConnectedComponentd,
     LoadImaged,
     RandFlipd,
     RandRotate90d,
@@ -32,7 +30,7 @@ from monai.transforms import (
 
 from monailabel.tasks.train.basic_train import BasicTrainTask, Context
 from monailabel.tasks.train.utils import region_wise_metrics
-from monailabel.transform.crop import RandomCropForegroundd
+from monailabel.transform.pre import FindAllValidSlicesByClassd, RandomCroppedSamplesd
 
 logger = logging.getLogger(__name__)
 
@@ -43,18 +41,20 @@ class Segmentation(BasicTrainTask):
         model_dir,
         network,
         spatial_size=(128, 128, 128),
-        description="Train generic Segmentation model",
+        num_samples=6,
+        description="Train Segmentation model",
         **kwargs,
     ):
         self._network = network
         self.spatial_size = spatial_size
+        self.num_samples = num_samples
         super().__init__(model_dir, description, **kwargs)
 
     def network(self, context: Context):
         return self._network
 
     def optimizer(self, context: Context):
-        return torch.optim.Adam(self._network.parameters(), 0.0002)
+        return torch.optim.Adam(self._network.parameters(), lr=0.001)
 
     def loss_function(self, context: Context):
         return DiceLoss(to_onehot_y=True, softmax=True, squared_pred=True)
@@ -70,10 +70,12 @@ class Segmentation(BasicTrainTask):
                 align_corners=(True, True),
             ),
             ScaleIntensityRanged(keys="image", a_min=-175, a_max=250, b_min=0.0, b_max=1.0, clip=True),
-            RandomCropForegroundd(
+            FindAllValidSlicesByClassd(label="label", sids="sids"),
+            RandomCroppedSamplesd(
                 keys=("image", "label"),
                 label_key="label",
-                num_samples=6,
+                sids_key="sids",
+                num_samples=self.num_samples,
                 spatial_size=self.spatial_size,
             ),
             SpatialPadd(keys=("image", "label"), spatial_size=self.spatial_size),
@@ -109,13 +111,6 @@ class Segmentation(BasicTrainTask):
             ScaleIntensityRanged(keys="image", a_min=-175, a_max=250, b_min=0.0, b_max=1.0, clip=True),
             EnsureTyped(keys=("image", "label"), device=context.device),
         ]
-
-    def val_post_transforms(self, context: Context):
-        applied_labels = list(self._labels.values()) if isinstance(self._labels, dict) else self._labels
-
-        t: List[Any] = self.train_post_transforms(context)
-        t.append(KeepLargestConnectedComponentd(keys="pred", applied_labels=applied_labels))
-        return t
 
     def val_inferer(self, context: Context):
         return SlidingWindowInferer(roi_size=(160, 160, 160))
