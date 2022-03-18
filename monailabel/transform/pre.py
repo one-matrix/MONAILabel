@@ -170,6 +170,6 @@ class RandomCroppedSamplesd(Randomizable, Transform):
         pass
 
     def __call__(self, data):
-        if self.probability > 0 and self.R.choice([True, False], p=[self.probability, 1 - self.probability]):
+        if self.R.choice([True, False], p=[self.probability, 1 - self.probability]):
             return self.random_foreground(data)
         return self.random_other(data)

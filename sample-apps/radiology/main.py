@@ -15,13 +15,16 @@ from distutils.util import strtobool
 from typing import Dict
 
 import lib.configs
+from lib.activelearning.first import First
 
 from monailabel.interfaces.app import MONAILabelApp
 from monailabel.interfaces.config import TaskConfig
 from monailabel.interfaces.datastore import Datastore
 from monailabel.interfaces.tasks.infer import InferTask
+from monailabel.interfaces.tasks.strategy import Strategy
 from monailabel.interfaces.tasks.train import TrainTask
 from monailabel.scribbles.infer import HistogramBasedGraphCut
+from monailabel.tasks.activelearning.random import Random
 from monailabel.tasks.infer.deepgrow_pipeline import InferDeepgrowPipeline
 from monailabel.utils.others.class_utils import get_class_names
 from monailabel.utils.others.planner import HeuristicPlanner
@@ -142,6 +145,12 @@ class MyApp(MONAILabelApp):
             trainers[n] = t
         return trainers
 
+    def init_strategies(self) -> Dict[str, Strategy]:
+        return {
+            "random": Random(),
+            "first": First(),
+        }
+
 
 """
 Example to run train/infer/scoring task(s) locally without actually running MONAI Label Server
@@ -181,7 +190,7 @@ def main():
             "model": model,
             "max_epochs": 2000,
             "dataset": "CacheDataset",  # PersistentDataset, CacheDataset
-            "train_batch_size": 6,
+            "train_batch_size": 2,
             "val_batch_size": 1,
             "multi_gpu": True,
             "val_split": 0.2,

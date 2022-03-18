@@ -18,7 +18,6 @@ from monai.transforms import (
     Activationsd,
     AddChanneld,
     AsDiscreted,
-    CropForegroundd,
     EnsureTyped,
     LoadImaged,
     RandFlipd,
@@ -31,7 +30,7 @@ from monai.transforms import (
 
 from monailabel.tasks.train.basic_train import BasicTrainTask, Context
 from monailabel.tasks.train.utils import region_wise_metrics
-from monailabel.transform.pre import FindAllValidSlicesByClassd, RandomForegroundCropSamplesd
+from monailabel.transform.pre import FindAllValidSlicesByClassd, RandomCroppedSamplesd
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +40,7 @@ class Segmentation(BasicTrainTask):
         self,
         model_dir,
         network,
-        spatial_size=(96, 96, 96),
+        spatial_size=(128, 128, 128),
         num_samples=4,
         description="Train Segmentation model",
         **kwargs,
@@ -64,11 +63,10 @@ class Segmentation(BasicTrainTask):
         return [
             LoadImaged(keys=("image", "label"), reader="ITKReader"),
             AddChanneld(keys=("image", "label")),
-            CropForegroundd(keys=("image", "label"), source_key="image"),
             ScaleIntensityRanged(keys="image", a_min=-175, a_max=250, b_min=0.0, b_max=1.0, clip=True),
             SpatialPadd(keys=("image", "label"), spatial_size=self.spatial_size),
             FindAllValidSlicesByClassd(label="label", sids="sids"),
-            RandomForegroundCropSamplesd(
+            RandomCroppedSamplesd(
                 keys=("image", "label"),
                 label_key="label",
                 sids_key="sids",
@@ -99,7 +97,6 @@ class Segmentation(BasicTrainTask):
         return [
             LoadImaged(keys=("image", "label"), reader="ITKReader"),
             AddChanneld(keys=("image", "label")),
-            CropForegroundd(keys=("image", "label"), source_key="image"),
             ScaleIntensityRanged(keys="image", a_min=-175, a_max=250, b_min=0.0, b_max=1.0, clip=True),
             EnsureTyped(keys=("image", "label")),
             SelectItemsd(keys=("image", "label")),
