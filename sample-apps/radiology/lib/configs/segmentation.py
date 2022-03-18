@@ -55,7 +55,7 @@ class Segmentation(TaskConfig):
 
         # Download PreTrained Model
         if strtobool(self.conf.get("use_pretrained_model", "false")):
-            url = f"{self.PRE_TRAINED_PATH}/segmentation_multilabel.pt"
+            url = f"{self.PRE_TRAINED_PATH}/segmentation_bunet_multilabel.pt"
             download_file(url, self.path[0])
 
         # Network
@@ -66,6 +66,7 @@ class Segmentation(TaskConfig):
             channels=[16, 32, 64, 128, 256],
             strides=[2, 2, 2, 2],
             num_res_units=2,
+            norm="batch",
         )
 
     def infer(self) -> Union[InferTask, Dict[str, InferTask]]:

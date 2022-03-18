@@ -179,9 +179,9 @@ def main():
         request={
             "name": "train_01",
             "model": model,
-            "max_epochs": 1000,
+            "max_epochs": 2000,
             "dataset": "CacheDataset",  # PersistentDataset, CacheDataset
-            "train_batch_size": 1,
+            "train_batch_size": 4,
             "val_batch_size": 1,
             "multi_gpu": True,
             "val_split": 0.2,

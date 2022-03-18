@@ -10,11 +10,12 @@
 # limitations under the License.
 import copy
 import logging
+import random
 from typing import Dict, Hashable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from monai.config import KeysCollection, NdarrayOrTensor
-from monai.transforms import MapTransform, Randomizable, RandSpatialCropSamplesd, SpatialCrop, Transform
+from monai.transforms import MapTransform, RandCropByPosNegLabeld, Randomizable, SpatialCrop, Transform
 from monai.utils import ImageMetaKey, ensure_tuple, ensure_tuple_rep
 
 logger = logging.getLogger(__name__)
@@ -84,10 +85,7 @@ class RandomForegroundCropSamplesd(Randomizable, MapTransform):
     def randomize(self, data):
         pass
 
-    def _apply(self, label, sids):
-        idx = self.R.choice([int(k) for k in sids.keys()], replace=False)
-        sid = self.R.choice(sids[idx], replace=False)
-
+    def _apply(self, label, idx, sid):
         label_2d = label[0][:, :, sid] if len(label.shape) == 4 else label[:, :, sid]
         x, y = np.where(np.equal(label_2d, idx))
         box_start = x.min(), y.min()
@@ -104,8 +102,12 @@ class RandomForegroundCropSamplesd(Randomizable, MapTransform):
         sids = d[self.sids_key]
 
         results: List[Dict[Hashable, NdarrayOrTensor]] = [dict(d) for _ in range(self.num_samples)]
-        for i in range(self.num_samples):
-            center = self._apply(label, sids)
+
+        indices = [int(k) for k in sids.keys()]
+        weights = [len(sids[k]) for k in indices]
+        for i, idx in enumerate(random.choices(indices, weights=weights, k=self.num_samples)):
+            sid = random.choice(sids[idx])
+            center = self._apply(label, idx, sid)
             cropper = SpatialCrop(roi_center=center, roi_size=self.spatial_size)
 
             for key in set(d.keys()).difference(set(self.keys)):
@@ -132,7 +134,8 @@ class RandomCroppedSamplesd(Randomizable, Transform):
         spatial_size: Union[Sequence[int], int],
         sids_key: str = "sids",
         num_samples: int = 1,
-        foreground_probability: float = 0.9,
+        foreground_probability: float = 0.75,
+        image_key: str = "image",
     ):
         self.probability = foreground_probability
         self.random_foreground = RandomForegroundCropSamplesd(
@@ -142,19 +145,21 @@ class RandomCroppedSamplesd(Randomizable, Transform):
             sids_key=sids_key,
             num_samples=num_samples,
         )
-        self.random_spatial = RandSpatialCropSamplesd(
+        self.random_other = RandCropByPosNegLabeld(
             keys=keys,
-            roi_size=spatial_size,
-            max_roi_size=spatial_size,
-            random_center=True,
-            random_size=False,
+            label_key=label_key,
+            spatial_size=spatial_size,
+            pos=1,
+            neg=1,
             num_samples=num_samples,
+            image_key=image_key,
+            image_threshold=0,
         )
 
     def randomize(self, data):
         pass
 
     def __call__(self, data):
-        if self.R.choice([True, False], p=[self.probability, 1 - self.probability]):
+        if self.probability > 0 and self.R.choice([True, False], p=[self.probability, 1 - self.probability]):
             return self.random_foreground(data)
-        return self.random_spatial(data)
+        return self.random_other(data)
