@@ -18,7 +18,6 @@ from monai.transforms import (
     EnsureTyped,
     KeepLargestConnectedComponentd,
     LoadImaged,
-    Orientationd,
     ScaleIntensityRanged,
     Spacingd,
     ToNumpyd,
@@ -60,7 +59,6 @@ class Segmentation(InferTask):
         return [
             LoadImaged(keys="image", reader="ITKReader"),
             AddChanneld(keys="image"),
-            Orientationd(keys="image", axcodes="RAS"),
             Spacingd(keys="image", pixdim=(1.0, 1.0, 1.0), align_corners=True),
             ScaleIntensityRanged(keys="image", a_min=-175, a_max=250, b_min=0.0, b_max=1.0, clip=True),
             EnsureTyped(keys="image"),
@@ -68,9 +66,6 @@ class Segmentation(InferTask):
 
     def inferer(self, data=None) -> Callable:
         return SlidingWindowInferer(roi_size=(160, 160, 160))
-
-    def inverse_transforms(self, data=None) -> Sequence[Callable]:
-        return []  # Self-determine from the list of pre-transforms provided
 
     def post_transforms(self, data=None) -> Sequence[Callable]:
         largest_cc = False if not data else data.get("largest_cc", False)

@@ -10,10 +10,10 @@
 # limitations under the License.
 import logging
 
-import torch
 from monai.handlers import TensorBoardImageHandler, from_engine
 from monai.inferers import SlidingWindowInferer
 from monai.losses import DiceCELoss
+from monai.optimizers import Novograd
 from monai.transforms import (
     Activationsd,
     AddChanneld,
@@ -21,7 +21,6 @@ from monai.transforms import (
     CropForegroundd,
     EnsureTyped,
     LoadImaged,
-    Orientationd,
     RandCropByPosNegLabeld,
     RandFlipd,
     RandRotate90d,
@@ -56,16 +55,15 @@ class Segmentation(BasicTrainTask):
         return self._network
 
     def optimizer(self, context: Context):
-        return torch.optim.Adam(context.network.parameters(), lr=0.0001)
+        return Novograd(context.network.parameters(), 0.0001)
 
     def loss_function(self, context: Context):
-        return DiceCELoss(to_onehot_y=True, softmax=True)
+        return DiceCELoss(to_onehot_y=True, softmax=True, squared_pred=True, batch=True)
 
     def train_pre_transforms(self, context: Context):
         return [
             LoadImaged(keys=("image", "label"), reader="ITKReader"),
             AddChanneld(keys=("image", "label")),
-            Orientationd(keys=("image", "label"), axcodes="RAS"),
             Spacingd(
                 keys=("image", "label"),
                 pixdim=(1.0, 1.0, 1.0),
@@ -108,7 +106,6 @@ class Segmentation(BasicTrainTask):
         return [
             LoadImaged(keys=("image", "label"), reader="ITKReader"),
             AddChanneld(keys=("image", "label")),
-            Orientationd(keys=("image", "label"), axcodes="RAS"),
             Spacingd(
                 keys=("image", "label"),
                 pixdim=(1.0, 1.0, 1.0),
