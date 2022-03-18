@@ -59,12 +59,7 @@ class Segmentation(TaskConfig):
             download_file(url, self.path[0])
 
         # Network
-        self.network = BasicUNet(
-            spatial_dims=3,
-            in_channels=1,
-            out_channels=14,
-            features=(32, 64, 128, 256, 512, 32),
-        )
+        self.network = BasicUNet(spatial_dims=3, in_channels=1, out_channels=14)
 
     def infer(self) -> Union[InferTask, Dict[str, InferTask]]:
         task: InferTask = lib.infers.Segmentation(path=self.path, network=self.network, labels=self.labels)

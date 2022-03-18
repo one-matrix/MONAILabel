@@ -16,6 +16,7 @@ from typing import Dict, Hashable, List, Optional, Sequence, Tuple, Union
 import numpy as np
 from monai.config import KeysCollection, NdarrayOrTensor
 from monai.transforms import MapTransform, RandCropByPosNegLabeld, Randomizable, SpatialCrop, Transform
+from monai.transforms.utils import correct_crop_centers
 from monai.utils import ImageMetaKey, ensure_tuple, ensure_tuple_rep
 
 logger = logging.getLogger(__name__)
@@ -87,6 +88,13 @@ class RandomForegroundCropSamplesd(Randomizable, MapTransform):
 
     def _apply(self, label, idx, sid):
         label_2d = label[0][:, :, sid] if len(label.shape) == 4 else label[:, :, sid]
+
+        if self.R.choice([True, False], p=[0.75, 0.25]):  # random positive point vs center of slice
+            idx_arr = np.argwhere(label_2d == idx)
+            random_idx = np.random.randint(len(idx_arr))
+            x, y = idx_arr[random_idx]
+            return [x, y, sid]
+
         x, y = np.where(np.equal(label_2d, idx))
         box_start = x.min(), y.min()
         box_end = x.max(), y.max()
@@ -104,10 +112,10 @@ class RandomForegroundCropSamplesd(Randomizable, MapTransform):
         results: List[Dict[Hashable, NdarrayOrTensor]] = [dict(d) for _ in range(self.num_samples)]
 
         indices = [int(k) for k in sids.keys()]
-        weights = [len(sids[k]) for k in indices]
-        for i, idx in enumerate(random.choices(indices, weights=weights, k=self.num_samples)):
+        for i, idx in enumerate(random.choices(indices, k=self.num_samples)):
             sid = random.choice(sids[idx])
             center = self._apply(label, idx, sid)
+            center = correct_crop_centers(center, self.spatial_size, label.shape[-3:], False)
             cropper = SpatialCrop(roi_center=center, roi_size=self.spatial_size)
 
             for key in set(d.keys()).difference(set(self.keys)):
@@ -115,6 +123,8 @@ class RandomForegroundCropSamplesd(Randomizable, MapTransform):
 
             for key in self.key_iterator(d):
                 results[i][key] = cropper(d[key])
+                if key == "label":
+                    logger.debug(f"{i} => region:{idx} => {results[i][key].shape} of {d[key].shape}; center: {center}")
 
             # add `patch_index` to the meta data
             for key, meta_key, meta_key_postfix in self.key_iterator(d, self.meta_keys, self.meta_key_postfix):
@@ -134,7 +144,7 @@ class RandomCroppedSamplesd(Randomizable, Transform):
         spatial_size: Union[Sequence[int], int],
         sids_key: str = "sids",
         num_samples: int = 1,
-        foreground_probability: float = 0.75,
+        foreground_probability: float = 0.5,
         image_key: str = "image",
     ):
         self.probability = foreground_probability
