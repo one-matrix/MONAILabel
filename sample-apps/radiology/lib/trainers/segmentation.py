@@ -13,7 +13,7 @@ import logging
 import torch
 from monai.handlers import TensorBoardImageHandler, from_engine
 from monai.inferers import SlidingWindowInferer
-from monai.losses import DiceLoss
+from monai.losses import DiceCELoss
 from monai.transforms import (
     Activationsd,
     AddChanneld,
@@ -25,6 +25,7 @@ from monai.transforms import (
     RandShiftIntensityd,
     ScaleIntensityRanged,
     SelectItemsd,
+    Spacingd,
     SpatialPadd,
 )
 
@@ -40,7 +41,7 @@ class Segmentation(BasicTrainTask):
         self,
         model_dir,
         network,
-        spatial_size=(128, 128, 128),
+        spatial_size=(96, 96, 96),
         num_samples=4,
         description="Train Segmentation model",
         **kwargs,
@@ -54,15 +55,19 @@ class Segmentation(BasicTrainTask):
         return self._network
 
     def optimizer(self, context: Context):
-        return torch.optim.Adam(context.network.parameters(), lr=0.001)
+        return torch.optim.AdamW(context.network.parameters(), lr=1e-4, weight_decay=1e-5)
 
     def loss_function(self, context: Context):
-        return DiceLoss(to_onehot_y=True, softmax=True, squared_pred=True)
+        return DiceCELoss(to_onehot_y=True, softmax=True)
+
+    def train_data_loader(self, context, num_workers=0, shuffle=False):
+        return super().train_data_loader(context, num_workers, True)
 
     def train_pre_transforms(self, context: Context):
         return [
             LoadImaged(keys=("image", "label"), reader="ITKReader"),
             AddChanneld(keys=("image", "label")),
+            Spacingd(keys=("image", "label"), pixdim=(1.0, 1.0, 1.0), mode=("bilinear", "nearest")),
             ScaleIntensityRanged(keys="image", a_min=-175, a_max=250, b_min=0.0, b_max=1.0, clip=True),
             SpatialPadd(keys=("image", "label"), spatial_size=self.spatial_size),
             FindAllValidSlicesByClassd(label="label", sids="sids"),
@@ -97,6 +102,7 @@ class Segmentation(BasicTrainTask):
         return [
             LoadImaged(keys=("image", "label"), reader="ITKReader"),
             AddChanneld(keys=("image", "label")),
+            Spacingd(keys=("image", "label"), pixdim=(1.0, 1.0, 1.0), mode=("bilinear", "nearest")),
             ScaleIntensityRanged(keys="image", a_min=-175, a_max=250, b_min=0.0, b_max=1.0, clip=True),
             EnsureTyped(keys=("image", "label")),
             SelectItemsd(keys=("image", "label")),

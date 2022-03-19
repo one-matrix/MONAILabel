@@ -190,7 +190,7 @@ def main():
             "model": model,
             "max_epochs": 2000,
             "dataset": "CacheDataset",  # PersistentDataset, CacheDataset
-            "train_batch_size": 2,
+            "train_batch_size": 4,
             "val_batch_size": 1,
             "multi_gpu": True,
             "val_split": 0.2,

@@ -19,6 +19,7 @@ from monai.transforms import (
     KeepLargestConnectedComponentd,
     LoadImaged,
     ScaleIntensityRanged,
+    Spacingd,
     ToNumpyd,
 )
 
@@ -58,6 +59,7 @@ class Segmentation(InferTask):
         return [
             LoadImaged(keys="image", reader="ITKReader"),
             AddChanneld(keys="image"),
+            Spacingd(keys="image", pixdim=(1.0, 1.0, 1.0)),
             ScaleIntensityRanged(keys="image", a_min=-175, a_max=250, b_min=0.0, b_max=1.0, clip=True),
             EnsureTyped(keys="image"),
         ]
