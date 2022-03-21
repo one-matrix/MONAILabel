@@ -55,10 +55,13 @@ class Segmentation(BasicTrainTask):
         return self._network
 
     def optimizer(self, context: Context):
-        return torch.optim.AdamW(context.network.parameters(), lr=1e-4, weight_decay=1e-5)
+        return torch.optim.Adam(context.network.parameters(), lr=1e-3)
 
     def loss_function(self, context: Context):
         return DiceCELoss(to_onehot_y=True, softmax=True)
+
+    def lr_scheduler_handler(self, context: Context):
+        return None
 
     def train_data_loader(self, context, num_workers=0, shuffle=False):
         return super().train_data_loader(context, num_workers, True)

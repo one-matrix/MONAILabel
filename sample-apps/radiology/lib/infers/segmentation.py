@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Callable, Dict, Sequence
+from typing import Callable, Sequence
 
 from monai.inferers import SlidingWindowInferer
 from monai.transforms import (
@@ -40,6 +40,7 @@ class Segmentation(InferTask):
         labels=None,
         dimension=3,
         description="A pre-trained model for volumetric (3D) segmentation over 3D Images",
+        **kwargs,
     ):
         super().__init__(
             path=path,
@@ -48,12 +49,8 @@ class Segmentation(InferTask):
             labels=labels,
             dimension=dimension,
             description=description,
+            **kwargs,
         )
-
-    def config(self) -> Dict[str, Any]:
-        c = super().config()
-        c["largest_cc"] = False
-        return c
 
     def pre_transforms(self, data=None) -> Sequence[Callable]:
         return [
