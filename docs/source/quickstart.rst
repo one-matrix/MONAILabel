@@ -253,7 +253,9 @@ endpoint of our DICOM server, which based on the last section is ``http://locaho
 
   # start the DeepEdit app in MONAI label server
   # and start annotating images in our DICOM server
-  monailabel start_server --app radiology --studies http://locahost:8042/dicom-web --conf models deepedit --username orthanc --password orthanc
+  export MONAI_LABEL_DICOMWEB_USERNAME=orthanc
+  export MONAI_LABEL_DICOMWEB_PASSWORD=orthanc
+  monailabel start_server --app radiology --studies http://locahost:8042/dicom-web --conf models deepedit 
 
 
 At this point OHIF can be used to annotate the data in the DICOM server via the MONAI Label server ``/ohif`` endpoint 
